@@ -1,0 +1,11 @@
+* Quipu
+
+Quipu is a p2p messaging and audio streaming application written using libp2p Rust implementation.
+
+** Status
+
+Currently learning libp2p and async in Rust.
+
+** Examples
+
+1. ping : example of a simple ICMP-like ping using libp2p rust tutorials

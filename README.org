@@ -8,4 +8,4 @@ Currently learning libp2p and async in Rust.
 
 ** Examples
 
-1. ping : example of a simple ICMP-like ping using libp2p rust tutorials
+1. ping : example of a simple ICMP-like ping using this [[https://docs.rs/libp2p/latest/libp2p/tutorials/ping/index.html][ping-tutorial]]

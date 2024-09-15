@@ -6,6 +6,19 @@ Quipu is a p2p messaging and audio streaming application written using libp2p Ru
 
 Currently learning libp2p and async in Rust.
 
+** Dependencies
+
+Check [[https://github.com/Mediacom99/quipu/blob/main/Cargo.toml][Cargo.toml]] for more info.
+
+- libp2p
+- tokio
+- serde
+- bincode
+- tracing
+- tracing-subscriber
+- thiserror
+- chrono
+
 ** Examples
 
 1. ping : example of a simple ICMP-like ping using this [[https://docs.rs/libp2p/latest/libp2p/tutorials/ping/index.html][ping-tutorial]]

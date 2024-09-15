@@ -4,7 +4,21 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+
+# fast binary serielization/deserialziation with serde
+bincode = "1.3.3"
+serde = { version = "1.0.210", features = ["derive"] }
+
+# handle timestamp for messages in local system time or utc
+chrono = { version = "0.4.38", features = ["serde"] }
+
+# p2p networking library
 libp2p = { version = "0.54.1", features = ["full"] }
+
+# rust async runtime
 tokio = { version = "1", features = ["full"] }
+
+# libraries for logging an async binary
 tracing = { version =  "0.1.40", features = ["max_level_trace", "release_max_level_info"]}
 tracing-subscriber = { version = "0.3.18", features = ["env-filter", "fmt", "registry"] }
+thiserror = "1.0.63"

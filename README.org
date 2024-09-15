@@ -18,7 +18,3 @@ Check [[https://github.com/Mediacom99/quipu/blob/main/Cargo.toml][Cargo.toml]] f
 - tracing-subscriber
 - thiserror
 - chrono
-
-** Examples
-
-1. ping : example of a simple ICMP-like ping using this [[https://docs.rs/libp2p/latest/libp2p/tutorials/ping/index.html][ping-tutorial]]

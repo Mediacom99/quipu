@@ -13,7 +13,7 @@ serde = { version = "1.0.210", features = ["derive"] }
 chrono = { version = "0.4.38", features = ["serde"] }
 
 # p2p networking library
-libp2p = { version = "0.54.1", features = ["full"] }
+libp2p = { version = "0.54.1", features = ["full", "quic", "mdns"] }
 
 # rust async runtime
 tokio = { version = "1", features = ["full"] }

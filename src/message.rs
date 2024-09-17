@@ -4,7 +4,6 @@ use crate::prelude::*;
 use chrono::{DateTime, Local};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use tracing::instrument;
 
 /// Handles a basic chat message, only text.
 /// Needs serde traits to that bincode knows how to treat them.
@@ -27,10 +26,8 @@ pub struct ChatMessage {
 ///Custom errors for messages
 #[derive(Error, Debug)]
 pub enum MessageError {
-    #[error("Failed to serialize message: {0}")]
-    SerializationError(String),
-    #[error("Failed to deserialize message: {0}")]
-    DeserializationError(String),
+    #[error("Failed to serialize/deserialize message")]
+    SerializationError,
 }
 
 impl ChatMessage {
@@ -51,43 +48,40 @@ impl ChatMessage {
     ///Serialize ChatMessage struct into vector of u8 using bincode.
     pub async fn serialize(&self) -> Result<Vec<u8>, MessageError> {
         bincode::serialize(self).map_err(|err| {
-            error!("could not serialize the message: {:#?}", self);
-            MessageError::SerializationError(err.to_string())
+            error!("could not serialize the message: {}", err);
+            MessageError::SerializationError
         })
     }
-    
+
     #[instrument]
     ///Serialize ChatMessage struct into vector of u8 using bincode.
     pub async fn deserialize(&self, data: &[u8]) -> Result<Self, MessageError> {
         bincode::deserialize(data).map_err(|err| {
-            error!("could not deserialize the message: {:#?}", self);
-            MessageError::DeserializationError(err.to_string())
+            error!("could not deserialize the message: {}", err);
+            MessageError::SerializationError
         })
     }
 }
 
-#[tokio::test]
-#[instrument]
 ///Test for ChatMessage serialization/deserialization using bincode
+#[tokio::test]
 async fn test_chatmessage_serialization() {
-    crate::log::tracing_subscriber_setup("trace").await;
-    
     let newmessage = ChatMessage::new(
-        "Edoardo".to_string(),
-        "This is a message from Edoardo".to_string(),
+        "Trinity".to_string(),
+        "This is a message from Trinity xoxo".to_string(),
         "6969".to_string(),
     );
 
     let newmessage2 = ChatMessage::new(
-        "Pietro".to_string(),
-        "dasdasd".to_string(),
-        "1234".to_string(),
+        "Trinity".to_string(),
+        "yayayayayayayaya".to_string(),
+        "7777".to_string(),
     );
-    
+
     debug!("New message: {:#?}", newmessage);
 
     let data = newmessage.serialize().await.unwrap();
-    debug!("Serialized message: {:?}", data);
+    debug!("Serialized message bytes: {:02x?}", data);
 
     let oldmessage = newmessage.deserialize(data.as_slice()).await.unwrap();
 
@@ -95,5 +89,4 @@ async fn test_chatmessage_serialization() {
 
     assert_ne!(newmessage, newmessage2);
     assert_eq!(newmessage, oldmessage);
-
 }

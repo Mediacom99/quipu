@@ -18,3 +18,9 @@ Check [[https://github.com/Mediacom99/quipu/blob/main/Cargo.toml][Cargo.toml]] f
 - tracing-subscriber
 - thiserror
 - chrono
+
+
+** Reading material
+
+- [[https://tokio.rs/tokio/tutorial/io][tokio tutorial]]
+- [[https://docs.libp2p.io/concepts/introduction/overview/][libp2p guide]]

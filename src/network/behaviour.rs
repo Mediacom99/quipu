@@ -1,12 +1,11 @@
 //! This module handles the chat network behaviour for libp2p creation of a swarm.
 //! The protocol is GossipSub and for peer discovery Kademlia DHT (kad).
 
+
 use libp2p::{
     kad::{self, store::MemoryStore},
-    // relay,
     swarm::NetworkBehaviour,
     PeerId,
-    mdns
 };
 use crate::prelude::*;
 
@@ -16,8 +15,7 @@ use crate::prelude::*;
 #[derive(NetworkBehaviour)]
 pub struct QBehaviour {
     // relay: relay::Behaviour,
-    kad: kad::Behaviour<MemoryStore>,
-    mdns: mdns::tokio::Behaviour,
+    pub kad: kad::Behaviour<MemoryStore>,
 }
 
 impl QBehaviour {
@@ -28,10 +26,7 @@ impl QBehaviour {
         //Kademlia DHT behaviour
         let kad = kad::Behaviour::new(local_peer_id, MemoryStore::new(local_peer_id));
 
-        // mdns for LAN peer discovery
-        let mdns = mdns::tokio::Behaviour::new(mdns::Config::default(), local_peer_id)?;
-
-        let qbehaviour = QBehaviour { kad, mdns };
+        let qbehaviour = QBehaviour { kad };
 
         Ok(qbehaviour)
 

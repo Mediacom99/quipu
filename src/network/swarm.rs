@@ -8,7 +8,7 @@
 //! 3. Implementation of the NetworkBehaviour Trait. (State machine that decides how the
 //!    swarm should behave once it is connected to a node.)
 
-use std::str::{FromStr, Lines};
+use std::str::FromStr;
 use libp2p::{
     futures::StreamExt,
     identity::Keypair,
@@ -87,8 +87,7 @@ impl QPeer {
                 bytes_read = reader.read_line(&mut buffer) => {
                     debug!("Read {} bytes from stdin", bytes_read?);
                     println!("Command entered: {}", buffer);
-                    if buffer.starts_with("findpeer") {
-                        println!("Asked for command findpeer");
+                    if buffer.starts_with("FindPeer") {
                         self.swarm.behaviour_mut().kad.get_closest_peers(self.peer_id);
                     } else {
                         warn!("This commmand was not recognized");

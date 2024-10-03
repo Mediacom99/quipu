@@ -3,27 +3,24 @@
 //! so that they can find each other by querying the DHT.
 
 use libp2p::{
-    futures::StreamExt,
-    identity,
-    kad::{self,
-          store::MemoryStore,
-          Event::*,
-          InboundRequest::*,
-    },
-    swarm::{NetworkBehaviour, SwarmEvent},
-    PeerId,
-    SwarmBuilder,
+    futures::StreamExt, identify, identity, kad::{self, store::{MemoryStore, RecordStore}, Event::*, InboundRequest::*
+    }, swarm::{NetworkBehaviour, SwarmEvent, dial_opts::DialOpts}, PeerId, StreamProtocol, Swarm, SwarmBuilder
     
 };
 use quipu::{
     prelude::*,
     log,
 };
-use std::{fs::File, io::Read};
+
+use tokio::io::{AsyncBufReadExt, BufReader};
+
+use std::{fs::File, str::FromStr};
+use std::io::Read;
 
 #[derive(NetworkBehaviour)]
 struct BBehaviour {
     kad: kad::Behaviour<MemoryStore>,
+    identify: identify::Behaviour,
 }
 
 fn load_keypair_from_file() -> Result<identity::Keypair, Box<dyn Error>> {
@@ -48,10 +45,13 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let local_key = load_keypair_from_file()?;
     
     let local_peer_id = PeerId::from_public_key(&local_key.public());
-    
+
     let kad = kad::Behaviour::new(local_peer_id, MemoryStore::new(local_peer_id));
 
-    let bbehaviour = BBehaviour { kad };
+    let identify_config = identify::Config::new(String::new(), local_key.public());
+    let identify = identify::Behaviour::new(identify_config);
+
+    let bbehaviour = BBehaviour { kad, identify};
 
     let mut swarm = SwarmBuilder::with_existing_identity(local_key)
         .with_tokio()
@@ -59,19 +59,24 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .with_behaviour(|_| {bbehaviour})?
         .build();
     
-    swarm.listen_on("/ip4/127.0.0.1/udp/6969/quic-v1".parse()?)?;
+    swarm.listen_on("/ip4/127.0.0.1/udp/16969/quic-v1".parse()?)?;
+
+    let mut reader = BufReader::new(tokio::io::stdin());
 
     loop {
+        let mut buffer = String::new();
         tokio::select! {
+
+            // Handle user input
+            num_bytes_read = reader.read_line(&mut buffer) => {
+                trace!("Read {} bytes from stdin", num_bytes_read?);
+                parse_cli(&mut swarm, buffer).await.unwrap_or_else(|e| {
+                    warn!("cli parsing error: {}", e);
+                });
+            },
             swarm_run = swarm.select_next_some() =>
-                match swarm_run {
-                    SwarmEvent::NewListenAddr {address, ..} => {
-                        info!("Listening in {}", address)  
-                    },
-                    SwarmEvent::ConnectionEstablished {peer_id, ..} => {
-                        info!("Connected to peer: {:?}", peer_id)
-                    },
-                    SwarmEvent::Behaviour(event) => handle_behaviour_event(event)?,
+                match swarm_run {                    
+                    SwarmEvent::Behaviour(event) => handle_behaviour_event(event, &mut swarm)?,
                     e => warn!("Unhandled swarm event: {:?}", e),
                 },
         }
@@ -80,35 +85,71 @@ async fn main() -> Result<(), Box<dyn Error>> {
 }
 
 /// Handle Kademlia DHT events
-fn handle_behaviour_event(event: BBehaviourEvent) -> Result<(), Box<dyn Error>> {
+fn handle_behaviour_event(event: BBehaviourEvent, swarm: &mut Swarm<BBehaviour>) -> Result<(), Box<dyn Error>> {
     match event {
-        BBehaviourEvent::Kad(RoutingUpdated { peer, is_new_peer, addresses, old_peer, .. }) =>
-        {
-            info!("Kad routing table updated: {:?}, {:?}, {:?}, {:?}", peer, is_new_peer, addresses, old_peer)
-        },
-        BBehaviourEvent::Kad(ModeChanged { new_mode }) => {
-            info!("Kad changed mode into new mode: {:?}", new_mode)
-        },
-        BBehaviourEvent::Kad(InboundRequest { request }) => {
-            match request {
-                FindNode { num_closer_peers } => {
-                    info!("Found number of closer peers: {}", num_closer_peers)
+        BBehaviourEvent::Identify(event) => {
+            match event {
+                identify::Event::Received { connection_id, peer_id, info } => {
+                    info!("New Peer identified:\n\tPeerId: {:?}\n\tWarn: {:#?}", peer_id, info);
                 },
-                GetRecord { num_closer_peers, present_locally } => {
-                    info!("Inbound get record request: {:?}, {:?}", num_closer_peers, present_locally)
-                },
-                PutRecord { source, record, .. } => {
-                    info!("Inbound put record request: source {:?}, record {:?}", source, record)
-                },
-                e => {
-                    info!("Unhandled kad inbount request event: {:?}", e)
-                }
+                e => warn!("Unhandled identify event: {:?}", e),
             }
         },
-        BBehaviourEvent::Kad(OutboundQueryProgressed { id, result, stats, ..}) => {
-            info!("An outbound query has made progress: {:?} {:?} {:?}", id, result, stats)
-        },
-        e => info!("Unhandled kad event: {:?}", e),
+        e => warn!("Unhandled behaviour event: {:?}", e),
     }
     Ok(())
+}
+
+
+// Handling user input
+// TODO there is definitely a better way to do this
+// TODO also fix the help message
+use clap::{Parser, Subcommand, Args};
+
+#[derive(Parser, Debug)]
+#[command(
+    no_binary_name = true,
+)]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Commands>
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    DialPeer(DialPeerArgs),
+}
+
+#[derive(Args, Debug)]
+struct DialPeerArgs {
+    #[arg(required = true)]
+    peer_id: String,
+} 
+
+async fn parse_cli(swarm: &mut Swarm<BBehaviour>, line: String) -> Result<(), Box<dyn Error>>{
+
+    let args: Vec<&str> = line
+        .split_whitespace()
+        .collect();
+    
+    if args.is_empty() {
+        warn!("Empty user command");
+    } else {
+        match Cli::try_parse_from(args)?.command {
+            Some(Commands::DialPeer(args)) => {
+                println!("PeerId entered: {}", args.peer_id);
+                let peer_id = PeerId::from_str(&args.peer_id)?;
+                let dial_opt = DialOpts::peer_id(peer_id)
+                    .addresses(vec!["/ip4/127.0.0.1/udp/16969/quic-v1".parse().unwrap()])
+                    .build();
+                swarm.dial(dial_opt)?;                
+            },
+            None => {
+                warn!("Unrecognized command");
+            }
+        }
+    }
+    Ok(())
+
+    
 }

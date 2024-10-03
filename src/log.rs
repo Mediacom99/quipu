@@ -16,7 +16,7 @@ pub async fn tracing_subscriber_setup(log_level: &str) {
         .with_line_number(true)
         .with_thread_ids(true)
         .with_target(false)
-        .pretty();
+        .compact();
 
     //control with default env RUST_LOG
     //like RUST_LOG=debug cargo run

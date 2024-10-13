@@ -1,9 +1,4 @@
-
-use quipu::{
-    prelude::*,
-    network::swarm::QPeer,
-    log,
-};
+use quipu::{log, network::swarm::QPeer, prelude::*};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {

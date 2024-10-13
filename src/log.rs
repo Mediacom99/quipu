@@ -29,14 +29,3 @@ pub async fn tracing_subscriber_setup(log_level: &str) {
 
     debug!("Tracing subscriber successfully initialized")
 }
-
-///Stupid function to test different tracing event macros
-#[instrument(level = "trace")] //add tracing span to this function
-pub async fn try_event_macros() {
-    println!("Do smth");
-    trace!("This is a trace");
-    debug!("This is a debug");
-    info!("This is an info");
-    warn!("This is a warning");
-    error!("This is an error")
-}
